@@ -99,20 +99,6 @@ npm install
 
 4. Download **Service Account JSON** for Admin SDK (used in `seed/` scripts).
 
-5. Create `.env` in the project root and add your Firebase keys:
-
-```env
-FIREBASE_API_KEY=your-api-key
-FIREBASE_AUTH_DOMAIN=your-auth-domain
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_STORAGE_BUCKET=your-storage-bucket
-FIREBASE_MESSAGING_SENDER_ID=your-sender-id
-FIREBASE_APP_ID=your-app-id
-```
-
-> ⚠ **Important:** Do NOT commit `.env` or `serviceAccountKey.json` to GitHub.
-
----
 
 ## Seeding Database
 
