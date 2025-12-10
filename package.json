@@ -6,6 +6,7 @@
   "author": "Munyaradzi Chiondegwa",
   "type": "module",
   "dependencies": {
+    "@firebase/auth": "^1.11.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^14.5.2",
@@ -14,6 +15,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-scripts": "5.0.1",
+    "react-toastify": "^11.0.5",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

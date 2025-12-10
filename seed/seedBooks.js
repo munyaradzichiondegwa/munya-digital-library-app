@@ -1,11 +1,17 @@
+// seed/seedBooks.js
+// Full seeding script for books collection using Firebase Admin SDK.
+// Includes authentication, error handling, and full books dataset.
+// Run with: node seed/seedBooks.js (ensure "type": "module" in package.json)
+
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import { authenticate } from '../src/firebase.js';  // Adjust path if seed/ is at root (points to src/firebase.js)
 
 dotenv.config();
 
-console.log('Project ID from .env:', process.env.REACT_APP_FIREBASE_PROJECT_ID);  // Diagnostic
+console.log('Project ID from .env:', process.env.REACT_APP_FIREBASE_PROJECT_ID);
 
 // Initialize Admin SDK with service account
 const serviceAccountPath = path.resolve('./serviceAccountKey.json');
@@ -31,7 +37,7 @@ const db = admin.firestore();
 
 console.log('Admin SDK initialized for project:', admin.app().options.projectId);  // Diagnostic
 
-// Your books data (same as before)
+// Full books dataset
 const books = [
   { title: "Nervous Conditions", author: "Tsitsi Dangarembga", genre: "Fiction", publicationYear: 1988 },
   { title: "Matigari", author: "Ngũgĩ wa Thiong’o", genre: "Fiction", publicationYear: 1986 },
@@ -68,6 +74,9 @@ async function seedBooks() {
   try {
     console.log("📘 Starting Admin SDK seeding...\n");
 
+    // New: Authenticate using client-side firebase.js (for any auth-required rules)
+    await authenticate();
+
     const booksRef = db.collection('books');
 
     // Diagnostic: Test write (creates temp doc to initialize Firestore if needed)
@@ -103,12 +112,12 @@ async function seedBooks() {
     if (errorCount === 0) {
       console.log('✅ Check Firebase Console > Firestore > books collection to verify.');
     } else {
-      console.log('💡 If test failed, create Firestore database in console (Step 2). Check service account roles (Step 3).');
+      console.log('💡 If errors occurred, ensure Firestore rules allow writes (update to auth-required if needed).');
     }
   } catch (err) {
     console.error('❌ Fatal seeding error:', err);
   } finally {
-    // Clean up
+    // Clean up Admin SDK
     await admin.app().delete();
     process.exit(errorCount > 0 ? 1 : 0);
   }

@@ -1,50 +1,38 @@
 // src/components/BookList.js
-// Full-featured Book list:
-// - search (title+author), filtering (genre + status), sorting, pagination
-// - actions: edit, delete, change status (Borrow, Return, Mark Read, Start Reading)
-// - displays a simple statusHistory for each book
-// - uses shared service functions from src/services/books.js
+// Full-featured Book list with enhanced notifications
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';  // Removed unused: query, where, orderBy
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { deleteBook, updateBook } from '../services/books.js';
+import { toast } from 'react-toastify';  // New: For notifications
 import EditBookModal from './EditBookModal.js';
 import Pagination from './Pagination.js';
 
-// my status options (use these consistently in UI and seeding)
 const STATUS_OPTIONS = ['Available', 'Borrowed', 'Reserved', 'Reading', 'Returned', 'Read'];
 
-export default function BookList({ genre: propGenre, refreshTrigger }) {  // Added props
-  // data + UI state
-  const [books, setBooks] = useState([]); // raw from Firestore
+export default function BookList({ genre: propGenre, refreshTrigger }) {
+  const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const previousBooksLength = useRef(books.length);  // New: Track changes for toasts
 
-  // UI controls
-  const [genreFilter, setGenreFilter] = useState(propGenre || 'All');  // Use prop for initial filter
+  // UI controls (unchanged)
+  const [genreFilter, setGenreFilter] = useState(propGenre || 'All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState('title'); // title | author | year
-  const [sortDir, setSortDir] = useState('asc'); // asc | desc
-
-  // pagination
+  const [sortBy, setSortBy] = useState('title');
+  const [sortDir, setSortDir] = useState('asc');
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
-
-  // edit modal
-  const [editing, setEditing] = useState(null); // book object
+  const [editing, setEditing] = useState(null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    setGenreFilter(propGenre || 'All');  // Update filter if prop changes
+    setGenreFilter(propGenre || 'All');
 
-    // We listen to the whole collection for responsiveness.
-    // If you have a very large collection you may need server-side pagination.
     let q = collection(db, 'books');
-
-    // Keep reactive (we won't add server-side sort/filter here because we apply them client-side).
     const unsub = onSnapshot(
       q,
       snap => {
@@ -58,7 +46,6 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
               at: new Date().toISOString()
             }];
           } else {
-            // Normalize statusHistory: Convert Timestamp to ISO string for display
             obj.statusHistory = obj.statusHistory.map(h => ({
               status: h.status,
               at: h.at.toDate ? h.at.toDate().toISOString() : (h.at || new Date().toISOString())
@@ -68,22 +55,34 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
         });
         setBooks(data);
         setLoading(false);
+
+        // New: Detect and notify changes
+        const currentLength = data.length;
+        if (snap.metadata.hasPendingWrites) {
+          toast.info('Syncing changes...');
+        }
+        if (currentLength > previousBooksLength.current) {
+          toast.success('New book added!');
+        } else if (currentLength < previousBooksLength.current) {
+          toast.warning('A book was removed.');
+        }
+        previousBooksLength.current = currentLength;  // Update ref
       },
       err => {
         console.error('Firestore error:', err);
         setError('Failed to load books.');
+        toast.error('Failed to load books.');
         setLoading(false);
       }
     );
 
     return () => unsub();
-  }, [refreshTrigger, propGenre]);  // Added propGenre to deps (fixes exhaustive-deps warning)
+  }, [refreshTrigger, propGenre]);
 
-  // Derived / filtered / sorted list (memoized)
+  // Derived list (unchanged - filtering, sorting, etc.)
   const processed = useMemo(() => {
     let list = [...books];
 
-    // search: title + author (case-insensitive)
     if (search.trim() !== '') {
       const s = search.trim().toLowerCase();
       list = list.filter(b =>
@@ -92,17 +91,14 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
       );
     }
 
-    // genre filter
     if (genreFilter !== 'All') {
       list = list.filter(b => b.genre === genreFilter);
     }
 
-    // status filter
     if (statusFilter !== 'All') {
       list = list.filter(b => b.status === statusFilter);
     }
 
-    // sorting
     list.sort((a, b) => {
       let av, bv;
       if (sortBy === 'title') {
@@ -112,7 +108,6 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
         av = (a.author || '').toLowerCase();
         bv = (b.author || '').toLowerCase();
       } else {
-        // year
         av = a.publicationYear || 0;
         bv = b.publicationYear || 0;
       }
@@ -125,7 +120,6 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
     return list;
   }, [books, search, genreFilter, statusFilter, sortBy, sortDir]);
 
-  // pagination slice
   const total = processed.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   useEffect(() => {
@@ -134,45 +128,52 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
 
   const pageItems = processed.slice((page - 1) * pageSize, page * pageSize);
 
-  // Actions
+  // Actions (unchanged, but add toasts if needed)
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this book permanently?')) return;
-    await deleteBook(id);
+    try {
+      await deleteBook(id);
+      toast.success('Book deleted!');
+    } catch (err) {
+      toast.error('Failed to delete book.');
+    }
   };
 
-  // update status and append to statusHistory
   const changeStatus = async (book, newStatus) => {
-    // prepare new history entry
     const now = new Date().toISOString();
     const history = book.statusHistory ? [...book.statusHistory] : [];
     history.push({ status: newStatus, at: now });
 
-    // update both status and statusHistory
-    await updateBook(book.id, {
-      status: newStatus,
-      statusHistory: history
-    });
+    try {
+      await updateBook(book.id, {
+        status: newStatus,
+        statusHistory: history
+      });
+      toast.success(`Status updated to ${newStatus}!`);
+    } catch (err) {
+      toast.error('Failed to update status.');
+    }
   };
 
-  // small helpers for status action buttons
   const onBorrow = (book) => changeStatus(book, 'Borrowed');
   const onReturn = (book) => changeStatus(book, 'Returned');
   const onStartReading = (book) => changeStatus(book, 'Reading');
   const onMarkRead = (book) => changeStatus(book, 'Read');
 
-  // open edit modal
   const openEdit = (book) => setEditing(book);
   const closeEdit = () => setEditing(null);
-
-  // when edit modal saves, we'll get updated via onSnapshot — so just close it
-  const onEditSaved = () => closeEdit();
+  const onEditSaved = () => {
+    toast.success('Book updated!');
+    closeEdit();
+  };
 
   if (loading) return <div className="mt-6">Loading books...</div>;
   if (error) return <div className="mt-6 text-red-600">{error}</div>;
 
+  // Rest of JSX unchanged (controls, table, pagination, modal)
   return (
     <div className="mt-6 space-y-4">
-      {/* controls row */}
+      {/* Controls row - unchanged */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex gap-2 items-center">
           <input
@@ -181,7 +182,6 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
             onChange={e => { setSearch(e.target.value); setPage(1); }}
             className="px-3 py-2 border rounded"
           />
-
           <select value={genreFilter} onChange={e => { setGenreFilter(e.target.value); setPage(1); }} className="px-2 py-1 border rounded">
             <option value="All">All genres</option>
             <option value="Fiction">Fiction</option>
@@ -191,7 +191,6 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
             <option value="Biography">Biography</option>
             <option value="Unknown">Unknown</option>
           </select>
-
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="px-2 py-1 border rounded">
             <option value="All">All statuses</option>
             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -205,12 +204,10 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
             <option value="author">Author</option>
             <option value="year">Year</option>
           </select>
-
           <select value={sortDir} onChange={e => setSortDir(e.target.value)} className="px-2 py-1 border rounded">
             <option value="asc">Asc</option>
             <option value="desc">Desc</option>
           </select>
-
           <select value={pageSize} onChange={e => { setPageSize(parseInt(e.target.value)); setPage(1); }} className="px-2 py-1 border rounded">
             <option value={5}>5</option>
             <option value={10}>10</option>
@@ -219,7 +216,7 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
         </div>
       </div>
 
-      {/* table */}
+      {/* Table - unchanged */}
       <div className="overflow-x-auto">
         <table className="min-w-full table-auto border border-gray-200">
           <thead className="bg-gray-100">
@@ -233,7 +230,6 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
               <th className="px-4 py-2 border text-left">History</th>
             </tr>
           </thead>
-
           <tbody>
             {pageItems.map(book => (
               <tr key={book.id} className="hover:bg-gray-50 align-top">
@@ -241,7 +237,6 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
                 <td className="px-4 py-2 border">{book.author}</td>
                 <td className="px-4 py-2 border">{book.genre}</td>
                 <td className="px-4 py-2 border">{book.publicationYear}</td>
-
                 <td className="px-4 py-2 border">
                   <span className={`px-2 py-1 rounded text-xs ${
                     book.status === 'Available' ? 'bg-green-200 text-green-800' :
@@ -254,34 +249,25 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
                     {book.status}
                   </span>
                 </td>
-
                 <td className="px-4 py-2 border">
                   <div className="flex gap-2 flex-wrap">
                     <button onClick={() => openEdit(book)} className="px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Edit</button>
-
                     <button onClick={() => handleDelete(book.id)} className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">Delete</button>
-
-                    {/* status actions */}
                     {book.status !== 'Borrowed' && (
                       <button onClick={() => onBorrow(book)} className="px-2 py-1 bg-yellow-500 text-black rounded text-sm hover:brightness-90">Borrow</button>
                     )}
-
                     {book.status === 'Borrowed' && (
                       <button onClick={() => onReturn(book)} className="px-2 py-1 bg-green-500 text-white rounded text-sm hover:brightness-90">Return</button>
                     )}
-
                     {book.status !== 'Reading' && book.status !== 'Read' && (
                       <button onClick={() => onStartReading(book)} className="px-2 py-1 bg-blue-400 text-white rounded text-sm">Start Reading</button>
                     )}
-
                     {(book.status === 'Reading' || book.status === 'Borrowed') && (
                       <button onClick={() => onMarkRead(book)} className="px-2 py-1 bg-indigo-600 text-white rounded text-sm">Mark Read</button>
                     )}
                   </div>
                 </td>
-
                 <td className="px-4 py-2 border text-xs max-w-xs">
-                  {/* show latest 4 history items */}
                   {Array.isArray(book.statusHistory) && book.statusHistory.length > 0 ? (
                     <ul className="list-disc pl-4">
                       {book.statusHistory.slice(-4).reverse().map((h, idx) => (
@@ -300,13 +286,13 @@ export default function BookList({ genre: propGenre, refreshTrigger }) {  // Add
         </table>
       </div>
 
-      {/* pagination */}
+      {/* Pagination - unchanged */}
       <div className="flex items-center justify-between mt-4">
         <div className="text-sm text-gray-600">Showing {pageItems.length} of {total} books</div>
         <Pagination page={page} totalPages={totalPages} onChange={p => setPage(p)} />
       </div>
 
-      {/* edit modal */}
+      {/* Edit modal - unchanged */}
       {editing && (
         <EditBookModal book={editing} onClose={closeEdit} onSaved={onEditSaved} />
       )}
