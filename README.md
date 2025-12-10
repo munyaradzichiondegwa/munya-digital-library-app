@@ -1,8 +1,3 @@
-Absolutely! Here’s a full `README.md` for your **Munya Digital Library App**, tailored to your setup and GitHub audience. It includes installation, usage, features, and setup instructions.
-
----
-
-```markdown
 # Munya Digital Library App
 
 A **personal digital library app** built with **React 18** and **Firebase Firestore**. This app allows you to manage your book collection: add, search, filter, sort, track status history, and update books in real-time. Perfect for book lovers or anyone learning modern full-stack web development.
@@ -33,25 +28,6 @@ A **personal digital library app** built with **React 18** and **Firebase Firest
 
 ## Project Structure
 
-```
-
-munya-digital-library-app/
-├─ src/
-│  ├─ components/       # UI components (BookList, AddBookForm, EditBookModal, Pagination)
-│  ├─ services/         # Firestore wrappers (CRUD operations)
-│  ├─ firebase.js       # React Firebase config
-│  └─ App.js            # Main component
-├─ seed/                # Node scripts for seeding and cleaning Firestore
-│  ├─ books.js
-│  ├─ firebase.js
-│  ├─ seedBooks.js
-│  └─ clean.js
-├─ .env                 # Firebase config (ignored by Git)
-├─ package.json
-└─ README.md
-
-````
-
 ---
 
 ## Installation
@@ -63,7 +39,7 @@ git clone https://github.com/username/munya-digital-library-app.git
 cd munya-digital-library-app
 ````
 
-2. Install dependencies:
+1.1 Install dependencies:
 
 ```bash
 npm install
@@ -80,7 +56,6 @@ npm install
 3. Create a **Web App** to get your config keys.
 
 4. Download **Service Account JSON** for Admin SDK (used in `seed/` scripts).
-
 
 ## Seeding Database
 
@@ -124,14 +99,14 @@ Tests use **Jest** and **React Testing Library**, with Firebase mocked for isola
 
 You can deploy using:
 
-* **Firebase Hosting:**
+- **Firebase Hosting:**
 
 ```bash
 npm run build
 firebase deploy
 ```
 
-* **Vercel / Netlify:** Upload the `build` folder and configure environment variables.
+- **Vercel / Netlify:** Upload the `build` folder and configure environment variables.
 
 ---
 
@@ -145,7 +120,7 @@ MIT License – see `LICENSE` for details.
 
 **Munyaradzi Chiondegwa**
 [GitHub Profile](https://github.com/munyaradzichiondegwa)
-[Portfolio / Website] – https://munyaradzichiondegwa.netlify.app/
+[Portfolio / Website] – <https://munyaradzichiondegwa.netlify.app/>
 
 ---
 
