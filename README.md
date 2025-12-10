@@ -7,24 +7,6 @@ Absolutely! Here’s a full `README.md` for your **Munya Digital Library App**, 
 
 A **personal digital library app** built with **React 18** and **Firebase Firestore**. This app allows you to manage your book collection: add, search, filter, sort, track status history, and update books in real-time. Perfect for book lovers or anyone learning modern full-stack web development.
 
-![App Screenshot](screenshot.png)  
-*Replace `screenshot.png` with an actual image of your app*
-
----
-
-## Table of Contents
-
-- [Features](#features)  
-- [Tech Stack](#tech-stack)  
-- [Project Structure](#project-structure)  
-- [Installation](#installation)  
-- [Firebase Setup](#firebase-setup)  
-- [Seeding Database](#seeding-database)  
-- [Running the App](#running-the-app)  
-- [Testing](#testing)  
-- [Deployment](#deployment)  
-- [License](#license)  
-
 ---
 
 ## Features
@@ -163,7 +145,7 @@ MIT License – see `LICENSE` for details.
 
 **Munyaradzi Chiondegwa**
 [GitHub Profile](https://github.com/munyaradzichiondegwa)
-[Portfolio / Website] – Optional
+[Portfolio / Website] – https://munyaradzichiondegwa.netlify.app/
 
 ---
 
